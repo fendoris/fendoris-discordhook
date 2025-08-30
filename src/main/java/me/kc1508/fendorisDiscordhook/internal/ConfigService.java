@@ -18,6 +18,15 @@ public final class ConfigService {
         return plugin.getConfig();
     }
 
+    // helpers
+    private static String norm(String s) {
+        return s == null ? "" : s.trim();
+    } // trim
+
+    private static String raw(String s) {
+        return s == null ? "" : s;
+    }        // preserve spaces
+
     // toggles
     public boolean isEnabled() {
         return cfg().getBoolean("webhook.enabled", true);
@@ -29,7 +38,7 @@ public final class ConfigService {
 
     // webhook
     public String webhookUrl() {
-        return safe(cfg().getString("webhook.url", ""));
+        return norm(cfg().getString("webhook.url", ""));
     }
 
     public int timeoutMs() {
@@ -40,33 +49,33 @@ public final class ConfigService {
         return cfg().getBoolean("webhook.override-username", true);
     }
 
+    // preserve trailing spaces in prefixes
     public String chatUsernamePrefix() {
-        return safe(cfg().getString("webhook.username-prefix", ""));
+        return raw(cfg().getString("webhook.username-prefix", ""));
+    }
+
+    public String serverUsernamePrefix() {
+        return raw(cfg().getString("server-events.username-prefix", "(Server) "));
     }
 
     public String avatarTemplate() {
-        return safe(cfg().getString("webhook.avatar-url-template", ""));
-    } // tokens: <uuid>, <player>
+        return norm(cfg().getString("webhook.avatar-url-template", ""));
+    }
 
     public String avatarFallbackUrl() {
-        return safe(cfg().getString("webhook.avatar-fallback-url", ""));
+        return norm(cfg().getString("webhook.avatar-fallback-url", ""));
     }
 
     public boolean checkAvatarBeforeUse() {
         return cfg().getBoolean("webhook.check-avatar", true);
     }
 
-    // content
-    // tokens: <player>, <message>
+    // content (do not trim; allow user formatting)
     public String chatContentTemplate() {
-        return safe(cfg().getString("webhook.content-template", "<message>"));
+        return raw(cfg().getString("webhook.content-template", "<message>"));
     }
 
     // server events
-    public String serverUsernamePrefix() {
-        return safe(cfg().getString("server-events.username-prefix", "(Server) "));
-    }
-
     public boolean joinEnabled() {
         return cfg().getBoolean("server-events.join.enabled", true);
     }
@@ -75,13 +84,12 @@ public final class ConfigService {
         return cfg().getBoolean("server-events.quit.enabled", true);
     }
 
-    // tokens: <player>
     public String joinContentTemplate() {
-        return safe(cfg().getString("server-events.join.content-template", "<player> joined"));
+        return raw(cfg().getString("server-events.join.content-template", "<player> joined"));
     }
 
     public String quitContentTemplate() {
-        return safe(cfg().getString("server-events.quit.content-template", "<player> left"));
+        return raw(cfg().getString("server-events.quit.content-template", "<player> left"));
     }
 
     // lang keys
@@ -95,9 +103,5 @@ public final class ConfigService {
 
     public String keyWebhookMissing() {
         return "messages.webhook-missing";
-    }
-
-    private static String safe(String s) {
-        return s == null ? "" : s.trim();
     }
 }

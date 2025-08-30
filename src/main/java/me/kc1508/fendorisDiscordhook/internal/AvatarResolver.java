@@ -18,21 +18,17 @@ public final class AvatarResolver {
     }
 
     public CompletableFuture<String> resolve(UUID uuid, String playerName) {
+        final String uuidNoDash = uuid.toString().replace("-", "");
         final String template = cfg.avatarTemplate();
         final String fallback = cfg.avatarFallbackUrl();
-        final String primary = template.replace("<uuid>", uuid.toString()).replace("<player>", playerName);
 
-        if (!cfg.checkAvatarBeforeUse() || primary.isBlank()) {
-            return CompletableFuture.completedFuture(fallback);
-        }
+        final String primary = template.replace("<uuid_nodash>", uuidNoDash).replace("<uuid>", uuid.toString()).replace("<player>", playerName);
 
-        // HEAD check primary; fallback on non-2xx or error
+        if (primary.isBlank()) return CompletableFuture.completedFuture(fallback);
+        if (!cfg.checkAvatarBeforeUse()) return CompletableFuture.completedFuture(primary);
+
         final var req = HttpRequest.newBuilder(URI.create(primary)).timeout(Duration.ofMillis(Math.max(1000, cfg.timeoutMs()))).method("HEAD", HttpRequest.BodyPublishers.noBody()).build();
 
-        return http.sendAsync(req, HttpResponse.BodyHandlers.discarding()).thenApply(resp -> {
-            final int code = resp.statusCode();
-            if (code >= 200 && code < 300) return primary;
-            return fallback;
-        }).exceptionally(ex -> fallback);
+        return http.sendAsync(req, HttpResponse.BodyHandlers.discarding()).thenApply(resp -> (resp.statusCode() >= 200 && resp.statusCode() < 300) ? primary : fallback).exceptionally(ex -> fallback);
     }
 }
