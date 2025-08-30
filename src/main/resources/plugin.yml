@@ -1,0 +1,16 @@
+name: fendoris-discordhook
+version: '1.0-SNAPSHOT'
+main: me.kc1508.fendorisDiscordhook.FendorisDiscordhook
+api-version: '1.21'
+load: POSTWORLD
+
+commands:
+  discordhookreload:
+    description: Reload the fendoris-discordhook configuration
+    permission: fendoris.discordhook.reload
+    usage: /<command>
+
+permissions:
+  fendoris.discordhook.reload:
+    description: Allows reloading fendoris-discordhook
+    default: op
