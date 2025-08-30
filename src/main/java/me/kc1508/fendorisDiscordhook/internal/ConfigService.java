@@ -92,6 +92,10 @@ public final class ConfigService {
         return raw(cfg().getString("server-events.quit.content-template", "<player> left"));
     }
 
+    public boolean debug() {
+        return cfg().getBoolean("webhook.debug", false);
+    }
+
     // lang keys
     public String keyReloadOk() {
         return "messages.reload-success";

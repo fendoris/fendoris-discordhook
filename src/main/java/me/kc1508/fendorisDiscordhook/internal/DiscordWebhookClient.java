@@ -20,7 +20,9 @@ public final class DiscordWebhookClient {
         this.plugin = plugin;
         this.cfg = cfg;
         this.avatars = avatars;
-        this.http = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(cfg.timeoutMs())).build();
+        this.http = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(cfg.timeoutMs()))
+                .build();
     }
 
     public boolean isConfigured() {
@@ -32,11 +34,17 @@ public final class DiscordWebhookClient {
     public void sendChat(UUID uuid, String playerName, String plainMessage) {
         if (!isConfigured() || !cfg.isEnabled()) return;
 
-        final String content = cfg.chatContentTemplate().replace("<player>", playerName).replace("<message>", plainMessage);
+        final String content = cfg.chatContentTemplate()
+                .replace("<player>", playerName)
+                .replace("<message>", plainMessage);
 
-        final String username = cfg.overrideUsername() ? truncate(cfg.chatUsernamePrefix() + playerName, 80) : null;
+        final String username = cfg.overrideUsername()
+                ? truncate(cfg.chatUsernamePrefix() + playerName, 80)
+                : null;
 
-        avatars.resolve(uuid, playerName).thenAccept(avatarUrl -> post(content, username, avatarUrl));
+        avatars.resolve(uuid, playerName).thenAccept(avatarUrl ->
+                post(content, username, avatarUrl)
+        );
     }
 
     // Server event relay (join/quit)
@@ -44,9 +52,13 @@ public final class DiscordWebhookClient {
         if (!isConfigured() || !cfg.isEnabled()) return;
 
         final String content = contentTemplate.replace("<player>", playerName);
-        final String username = cfg.overrideUsername() ? truncate(cfg.serverUsernamePrefix() + playerName, 80) : null;
+        final String username = cfg.overrideUsername()
+                ? truncate(cfg.serverUsernamePrefix() + playerName, 80)
+                : null;
 
-        avatars.resolve(uuid, playerName).thenAccept(avatarUrl -> post(content, username, avatarUrl));
+        avatars.resolve(uuid, playerName).thenAccept(avatarUrl ->
+                post(content, username, avatarUrl)
+        );
     }
 
     private void post(String content, String usernameOrNull, String avatarUrlOrNull) {
@@ -64,12 +76,22 @@ public final class DiscordWebhookClient {
         }
         body.append('}');
 
-        final var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(cfg.timeoutMs())).header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8)).build();
+        // DEBUG LINE (requested)
+        if (cfg.debug()) {
+            plugin.getLogger().info("[fendoris-discordhook] payload username=" + usernameOrNull + " avatar=" + avatarUrlOrNull);
+        }
 
-        http.sendAsync(req, HttpResponse.BodyHandlers.discarding()).exceptionally(ex -> {
-            plugin.getLogger().warning("Discord webhook send failed: " + ex.getMessage());
-            return null;
-        });
+        final var req = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofMillis(cfg.timeoutMs()))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
+                .build();
+
+        http.sendAsync(req, HttpResponse.BodyHandlers.discarding())
+                .exceptionally(ex -> {
+                    plugin.getLogger().warning("Discord webhook send failed: " + ex.getMessage());
+                    return null;
+                });
     }
 
     private static String truncate(String s, int max) {

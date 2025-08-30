@@ -11,6 +11,7 @@ webhook:
   check-avatar: true
   # Tokens: <player>, <message>
   content-template: "<message>"
+  debug: false
 
 server-events:
   enabled: true
