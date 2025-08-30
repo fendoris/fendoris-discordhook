@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Set;
 import java.util.UUID;
 
 public final class DiscordWebhookClient {
@@ -20,9 +21,7 @@ public final class DiscordWebhookClient {
         this.plugin = plugin;
         this.cfg = cfg;
         this.avatars = avatars;
-        this.http = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(cfg.timeoutMs()))
-                .build();
+        this.http = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(cfg.timeoutMs())).build();
     }
 
     public boolean isConfigured() {
@@ -34,38 +33,36 @@ public final class DiscordWebhookClient {
     public void sendChat(UUID uuid, String playerName, String plainMessage) {
         if (!isConfigured() || !cfg.isEnabled()) return;
 
-        final String content = cfg.chatContentTemplate()
-                .replace("<player>", playerName)
-                .replace("<message>", plainMessage);
+        final String safePlayer = escapeDiscordMarkdown(playerName);
+        final String safeMsg = escapeDiscordMarkdown(plainMessage);
 
-        final String username = cfg.overrideUsername()
-                ? truncate(cfg.chatUsernamePrefix() + playerName, 80)
+        final String content = cfg.chatContentTemplate().replace("<player>", safePlayer).replace("<message>", safeMsg);
+
+        final String username = cfg.overrideUsername() ? truncate(cfg.chatUsernamePrefix() + playerName, 80) // username field is not markdown-parsed
                 : null;
 
-        avatars.resolve(uuid, playerName).thenAccept(avatarUrl ->
-                post(content, username, avatarUrl)
-        );
+        avatars.resolve(uuid, playerName).thenAccept(avatarUrl -> post(content, username, avatarUrl));
     }
 
-    // Server event relay (join/quit)
+    // Server events: use webhook’s default name/icon (no overrides)
     public void sendServerEvent(UUID uuid, String playerName, String contentTemplate) {
         if (!isConfigured() || !cfg.isEnabled()) return;
 
-        final String content = contentTemplate.replace("<player>", playerName);
-        final String username = cfg.overrideUsername()
-                ? truncate(cfg.serverUsernamePrefix() + playerName, 80)
-                : null;
+        final String safePlayer = escapeDiscordMarkdown(playerName);
+        final String content = contentTemplate.replace("<player>", safePlayer);
 
-        avatars.resolve(uuid, playerName).thenAccept(avatarUrl ->
-                post(content, username, avatarUrl)
-        );
+        post(content, null, null); // no username/avatar overrides
     }
 
     private void post(String content, String usernameOrNull, String avatarUrlOrNull) {
         final String url = cfg.webhookUrl();
 
-        final var body = new StringBuilder(256);
+        final var body = new StringBuilder(384);
         body.append('{');
+
+        // prevent pings
+        body.append("\"allowed_mentions\":{\"parse\":[]},");
+        // content
         body.append("\"content\":\"").append(escapeJson(truncate(content, 2000))).append('"');
 
         if (usernameOrNull != null) {
@@ -76,23 +73,19 @@ public final class DiscordWebhookClient {
         }
         body.append('}');
 
-        // DEBUG LINE (requested)
         if (cfg.debug()) {
             plugin.getLogger().info("[fendoris-discordhook] payload username=" + usernameOrNull + " avatar=" + avatarUrlOrNull);
         }
 
-        final var req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofMillis(cfg.timeoutMs()))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
-                .build();
+        final var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(cfg.timeoutMs())).header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8)).build();
 
-        http.sendAsync(req, HttpResponse.BodyHandlers.discarding())
-                .exceptionally(ex -> {
-                    plugin.getLogger().warning("Discord webhook send failed: " + ex.getMessage());
-                    return null;
-                });
+        http.sendAsync(req, HttpResponse.BodyHandlers.discarding()).exceptionally(ex -> {
+            plugin.getLogger().warning("Discord webhook send failed: " + ex.getMessage());
+            return null;
+        });
     }
+
+    // -------- helpers --------
 
     private static String truncate(String s, int max) {
         if (s == null) return "";
@@ -129,6 +122,24 @@ public final class DiscordWebhookClient {
                     if (c < 0x20) out.append(String.format("\\u%04x", (int) c));
                     else out.append(c);
             }
+        }
+        return out.toString();
+    }
+
+    // Escape Discord markdown: bold, italics, underline, strike, code, spoiler, quote, links, pipes
+    private static final Set<Character> MD = Set.of('*', '_', '~', '`', '|', '[', ']', '(', ')', '>', '#');
+
+    private static String escapeDiscordMarkdown(String s) {
+        if (s == null || s.isEmpty()) return "";
+        final StringBuilder out = new StringBuilder((int) (s.length() * 1.2));
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '\\') {
+                out.append("\\\\");
+                continue;
+            } // escape backslash first
+            if (MD.contains(c)) out.append('\\');
+            out.append(c);
         }
         return out.toString();
     }

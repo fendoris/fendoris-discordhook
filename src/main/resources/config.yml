@@ -3,9 +3,7 @@ webhook:
   url: "PUT_WEBHOOK_URL_HERE"
   timeout-ms: 5000
   override-username: true
-  username-prefix: ""  # chat username prefix, e.g. "[MC] "
-  # Use tokens <uuid> and <player>.
-  # Defaults use Minotar for reliability. You can switch to Crafatar easily.
+  username-prefix: ""
   avatar-url-template: "https://minotar.net/avatar/<uuid>/128"
   avatar-fallback-url: "https://minotar.net/avatar/Steve/128"
   check-avatar: true
@@ -15,15 +13,12 @@ webhook:
 
 server-events:
   enabled: true
-  username-prefix: "(Server) "
   join:
     enabled: true
-    # Tokens: <player>
-    content-template: "<player> joined"
+    content-template: "<player> connected"
   quit:
     enabled: true
-    # Tokens: <player>
-    content-template: "<player> left"
+    content-template: "<player> disconnected"
 
 messages:
   reload-success: "<green>fendoris-discordhook reloaded.</green>"
