@@ -38,20 +38,24 @@ public final class DiscordWebhookClient {
 
         final String content = cfg.chatContentTemplate().replace("<player>", safePlayer).replace("<message>", safeMsg);
 
-        final String username = cfg.overrideUsername() ? truncate(cfg.chatUsernamePrefix() + playerName, 80) // username field is not markdown-parsed
-                : null;
+        final String username = cfg.overrideUsername() ? truncate(cfg.chatUsernamePrefix() + playerName, 80) : null;
 
         avatars.resolve(uuid, playerName).thenAccept(avatarUrl -> post(content, username, avatarUrl));
     }
 
-    // Server events: use webhook’s default name/icon (no overrides)
-    public void sendServerEvent(UUID uuid, String playerName, String contentTemplate) {
+    // Server events: default webhook name/icon (no overrides)
+    public void sendServerEvent(String playerName, String contentTemplate) {
         if (!isConfigured() || !cfg.isEnabled()) return;
-
         final String safePlayer = escapeDiscordMarkdown(playerName);
         final String content = contentTemplate.replace("<player>", safePlayer);
+        post(content, null, null);
+    }
 
-        post(content, null, null); // no username/avatar overrides
+    // Server plain text (death): no overrides
+    public void sendServerText(String plainText) {
+        if (!isConfigured() || !cfg.isEnabled()) return;
+        final String safe = escapeDiscordMarkdown(plainText);
+        post(safe, null, null);
     }
 
     private void post(String content, String usernameOrNull, String avatarUrlOrNull) {
@@ -59,12 +63,8 @@ public final class DiscordWebhookClient {
 
         final var body = new StringBuilder(384);
         body.append('{');
-
-        // prevent pings
         body.append("\"allowed_mentions\":{\"parse\":[]},");
-        // content
         body.append("\"content\":\"").append(escapeJson(truncate(content, 2000))).append('"');
-
         if (usernameOrNull != null) {
             body.append(",\"username\":\"").append(escapeJson(usernameOrNull)).append('"');
         }
@@ -85,7 +85,7 @@ public final class DiscordWebhookClient {
         });
     }
 
-    // -------- helpers --------
+    // helpers
 
     private static String truncate(String s, int max) {
         if (s == null) return "";
@@ -126,7 +126,6 @@ public final class DiscordWebhookClient {
         return out.toString();
     }
 
-    // Escape Discord markdown: bold, italics, underline, strike, code, spoiler, quote, links, pipes
     private static final Set<Character> MD = Set.of('*', '_', '~', '`', '|', '[', ']', '(', ')', '>', '#');
 
     private static String escapeDiscordMarkdown(String s) {
@@ -137,7 +136,7 @@ public final class DiscordWebhookClient {
             if (c == '\\') {
                 out.append("\\\\");
                 continue;
-            } // escape backslash first
+            }
             if (MD.contains(c)) out.append('\\');
             out.append(c);
         }

@@ -21,11 +21,11 @@ public final class ConfigService {
     // helpers
     private static String norm(String s) {
         return s == null ? "" : s.trim();
-    } // trim
+    }
 
     private static String raw(String s) {
         return s == null ? "" : s;
-    }        // preserve spaces
+    }
 
     // toggles
     public boolean isEnabled() {
@@ -49,13 +49,8 @@ public final class ConfigService {
         return cfg().getBoolean("webhook.override-username", true);
     }
 
-    // preserve trailing spaces in prefixes
     public String chatUsernamePrefix() {
         return raw(cfg().getString("webhook.username-prefix", ""));
-    }
-
-    public String serverUsernamePrefix() {
-        return raw(cfg().getString("server-events.username-prefix", "(Server) "));
     }
 
     public String avatarTemplate() {
@@ -70,7 +65,7 @@ public final class ConfigService {
         return cfg().getBoolean("webhook.check-avatar", true);
     }
 
-    // content (do not trim; allow user formatting)
+    // content
     public String chatContentTemplate() {
         return raw(cfg().getString("webhook.content-template", "<message>"));
     }
@@ -82,6 +77,10 @@ public final class ConfigService {
 
     public boolean quitEnabled() {
         return cfg().getBoolean("server-events.quit.enabled", true);
+    }
+
+    public boolean deathEnabled() {
+        return cfg().getBoolean("server-events.death.enabled", true);
     }
 
     public String joinContentTemplate() {

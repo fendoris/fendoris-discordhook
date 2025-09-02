@@ -1,5 +1,5 @@
 name: fendoris-discordhook
-version: '1.0'
+version: '1.1'
 main: me.kc1508.fendorisDiscordhook.FendorisDiscordhook
 api-version: '1.21'
 load: POSTWORLD
